@@ -16,10 +16,9 @@ import javax.sql.DataSource;
 import java.util.List;
 
 @Configuration
-@ComponentScan("com.epam.esm")
-@EnableWebMvc
 @PropertySource("classpath:datasource.properties")
 public class RestApiConfig implements WebMvcConfigurer {
+//public class RestApiConfig {
     @Autowired
     private Environment env;
     @Bean(destroyMethod = "close")

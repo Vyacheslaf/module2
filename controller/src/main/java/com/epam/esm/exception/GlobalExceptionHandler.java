@@ -14,11 +14,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.sql.SQLException;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     /**
      * Returns error if resource already exists
@@ -73,12 +74,12 @@ public class GlobalExceptionHandler {
      * @param e NoHandlerFoundException
      * @return Error response
      */
-    @ExceptionHandler(NoHandlerFoundException.class)
+/*    @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException e) {
         long errorCode = 40001;
         ErrorResponse errorResponse = new ErrorResponse(e.getMessage(), errorCode);
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
+    }*/
 
     /**
      * Returns error if database error occurs
@@ -110,10 +111,10 @@ public class GlobalExceptionHandler {
      * @param e Exception
      * @return Error response
      */
-    @ExceptionHandler({MethodArgumentNotValidException.class,
-            MethodArgumentTypeMismatchException.class,
-            HttpMessageNotReadableException.class,
-            HttpMediaTypeNotSupportedException.class})
+    @ExceptionHandler({//MethodArgumentNotValidException.class,
+            MethodArgumentTypeMismatchException.class})//,
+//            HttpMessageNotReadableException.class,
+//            HttpMediaTypeNotSupportedException.class})
     public ResponseEntity<ErrorResponse> handleNotValidException(Exception e) {
         long errorCode = 40002;
         ErrorResponse errorResponse = new ErrorResponse(e.getMessage(), errorCode);
