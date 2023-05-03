@@ -19,7 +19,7 @@ public class InvalidRequestException extends RuntimeException {
         StringJoiner joiner = new StringJoiner(JOINER_DELIMITER, JOINER_PREFIX, JOINER_POSTFIX);
         br.getAllErrors().stream()
                 .filter(o -> o instanceof FieldError)
-                .forEach(o -> joiner.add(((FieldError) o).getField()));
+                .forEach(o -> joiner.add("'" + ((FieldError) o).getField() + "'"));
         this.errorMesage = joiner.toString();
     }
 }

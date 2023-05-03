@@ -1,7 +1,7 @@
 package com.epam.esm.service;
 
-import com.epam.esm.dao.Dao;
-import com.epam.esm.dao.sql.GiftCertificateDao;
+import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.Tag;
 import com.epam.esm.exception.dao.DaoException;
@@ -29,14 +29,14 @@ import static org.mockito.Mockito.*;
 public class GiftCertificateServiceTest {
     private static final int MOCK_CERTIFICATE_LIST_SIZE = 3;
     private static final int H2_CERTIFICATE_LIST_SIZE = 2;
-    private static Dao<GiftCertificate> mockDao;
+    private static GiftCertificateDao mockDao;
     private static List<GiftCertificate> giftCertificates;
     private DataSource dataSource;
     private Service<GiftCertificate> service;
 
     @BeforeAll
     public static void prepareMockDao() {
-        mockDao = Mockito.mock(Dao.class);
+        mockDao = Mockito.mock(GiftCertificateDao.class);
         giftCertificates = new ArrayList<>();
         for (int i = 1; i < MOCK_CERTIFICATE_LIST_SIZE + 1; i++) {
             GiftCertificate certificate = new GiftCertificate();
@@ -52,8 +52,8 @@ public class GiftCertificateServiceTest {
                                                   .addScript("test/schema.sql")
                                                   .addScript("test/data.sql")
                                                   .build();
-        Dao<GiftCertificate> dao = new GiftCertificateDao(dataSource);
-        service = new GiftCertificateService(dao);
+        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
+        service = new GiftCertificateServiceImpl(dao);
     }
 
     @ParameterizedTest
@@ -69,7 +69,7 @@ public class GiftCertificateServiceTest {
         certificate.setLastUpdateDate(getDate(updateDate));
         when(mockDao.create(certificate)).thenReturn(giftCertificates.get(0));
 
-        GiftCertificateService certificateService = new GiftCertificateService(mockDao);
+        GiftCertificateServiceImpl certificateService = new GiftCertificateServiceImpl(mockDao);
 
         assertEquals(giftCertificates.get(0), certificateService.create(certificate));
     }
@@ -86,7 +86,7 @@ public class GiftCertificateServiceTest {
         int id = 2;
         when(mockDao.findById(id)).thenReturn(giftCertificates.get(id - 1));
 
-        GiftCertificateService certificateService = new GiftCertificateService(mockDao);
+        GiftCertificateServiceImpl certificateService = new GiftCertificateServiceImpl(mockDao);
 
         assertEquals(giftCertificates.get(id - 1), certificateService.findById(id));
     }
@@ -95,7 +95,7 @@ public class GiftCertificateServiceTest {
     public void findAllTest() throws DaoException, ServiceException {
         when(mockDao.findAll(any(RequestParametersHolder.class))).thenReturn(giftCertificates);
 
-        GiftCertificateService certificateService = new GiftCertificateService(mockDao);
+        GiftCertificateServiceImpl certificateService = new GiftCertificateServiceImpl(mockDao);
 
         assertEquals(MOCK_CERTIFICATE_LIST_SIZE, certificateService.findAll(new RequestParametersHolder()).size());
     }
@@ -103,7 +103,7 @@ public class GiftCertificateServiceTest {
     @Test
     public void deleteTest() throws DaoException, ServiceException {
         int id = 3;
-        GiftCertificateService certificateService = new GiftCertificateService(mockDao);
+        GiftCertificateServiceImpl certificateService = new GiftCertificateServiceImpl(mockDao);
         certificateService.delete(id);
         verify(mockDao, atLeastOnce()).delete(anyLong());
     }
@@ -118,7 +118,7 @@ public class GiftCertificateServiceTest {
         certificate.setLastUpdateDate(getDate(updateDate));
         when(mockDao.update(certificate)).thenReturn(giftCertificates.get(0));
 
-        GiftCertificateService certificateService = new GiftCertificateService(mockDao);
+        GiftCertificateServiceImpl certificateService = new GiftCertificateServiceImpl(mockDao);
 
         assertEquals(giftCertificates.get(0).getId(), certificateService.update(certificate).getId());
     }

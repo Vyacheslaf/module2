@@ -1,7 +1,7 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dao.Dao;
-import com.epam.esm.dao.sql.TagDao;
+import com.epam.esm.dao.sql.TagDaoImpl;
 import com.epam.esm.entity.Tag;
 import com.epam.esm.exception.dao.DaoDuplicateKeyException;
 import com.epam.esm.exception.dao.DaoException;
@@ -39,7 +39,7 @@ public class TagControllerTest {
                                                              .addScript("test/schema.sql")
                                                              .addScript("test/data.sql")
                                                              .build();
-        Dao<Tag> tagDao = new TagDao(dataSource);
+        Dao<Tag> tagDao = new TagDaoImpl(dataSource);
         Service<Tag> tagService = new TagService(tagDao);
         controller = new TagController(tagService);
     }

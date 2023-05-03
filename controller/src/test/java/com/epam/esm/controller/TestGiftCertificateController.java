@@ -1,10 +1,12 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dao.Dao;
-import com.epam.esm.dao.sql.GiftCertificateDao;
+import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.exception.GlobalExceptionHandler;
 import com.epam.esm.service.GiftCertificateService;
+import com.epam.esm.service.GiftCertificateServiceImpl;
 import com.epam.esm.service.Service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebAppConfiguration
 public class TestGiftCertificateController {
     private MockMvc mockMvc;
-    private Service<GiftCertificate> service;
+    private GiftCertificateService service;
 
     @BeforeEach
     public void setup() throws Exception {
@@ -41,8 +43,8 @@ public class TestGiftCertificateController {
                 .addScript("test/schema.sql")
                 .addScript("test/data.sql")
                 .build();
-        Dao<GiftCertificate> dao = new GiftCertificateDao(dataSource);
-        service = new GiftCertificateService(dao);
+        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
+        service = new GiftCertificateServiceImpl(dao);
         mockMvc = MockMvcBuilders.standaloneSetup(new GiftCertificateController(service))
                                  .setControllerAdvice(new GlobalExceptionHandler())
                                  .build();

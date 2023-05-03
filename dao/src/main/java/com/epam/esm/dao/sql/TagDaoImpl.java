@@ -24,7 +24,7 @@ import java.util.NoSuchElementException;
 
 @Repository
 @RequestScope
-public class TagDao implements Dao<Tag> {
+public class TagDaoImpl implements Dao<Tag> {
     private JdbcTemplate jdbcTemplate;
     private static final String CREATE_QUERY = "INSERT INTO tag (name) VALUES (?)";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM tag WHERE id = ?";
@@ -33,7 +33,7 @@ public class TagDao implements Dao<Tag> {
     private static final String RESOURCE_NAME = "Tag";
 
     @Autowired
-    public TagDao(DataSource dataSource) {
+    public TagDaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 

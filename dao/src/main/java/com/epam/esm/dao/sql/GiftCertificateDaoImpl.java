@@ -1,6 +1,6 @@
 package com.epam.esm.dao.sql;
 
-import com.epam.esm.dao.Dao;
+import com.epam.esm.dao.GiftCertificateDao;
 import com.epam.esm.util.RequestParametersHolder;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.Tag;
@@ -23,7 +23,7 @@ import java.util.*;
 
 @Repository
 @RequestScope
-public class GiftCertificateDao implements Dao<GiftCertificate> {
+public class GiftCertificateDaoImpl implements GiftCertificateDao {
     private final JdbcTemplate jdbcTemplate;
     private static final String CREATE_QUERY = "INSERT INTO gift_certificate VALUES (DEFAULT, ?, ?, ?, ?, ?, ?)";
     private static final String FIND_BY_ID_QUERY = "SELECT gc.*, t.id AS tag_id, t.name AS tag_name " +
@@ -55,6 +55,9 @@ public class GiftCertificateDao implements Dao<GiftCertificate> {
                                                    "create_date = COALESCE(?, create_date), " +
                                                    "last_update_date = COALESCE(?, last_update_date) " +
                                                "WHERE id = ?";
+    private static final String UPDATE_DURATION_QUERY = "UPDATE gift_certificate " +
+                                                        "SET duration = ?, last_update_date = ? " +
+                                                        "WHERE id = ?";
     private static final String CREATE_CERTIFICATE_TAG_QUERY = "INSERT INTO gift_certificate_tag VALUES (?, ?)";
     private static final String DELETE_CERTIFICATE_TAG_QUERY = "DELETE FROM gift_certificate_tag " +
                                                                "WHERE gift_certificate_id = ?";
@@ -74,7 +77,7 @@ public class GiftCertificateDao implements Dao<GiftCertificate> {
     private static final String RESOURCE_NAME = "GiftCertificate";
 
     @Autowired
-    public GiftCertificateDao(DataSource dataSource) {
+    public GiftCertificateDaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 
@@ -153,6 +156,19 @@ public class GiftCertificateDao implements Dao<GiftCertificate> {
         }
         certificate = findById(certificate.getId());
         return certificate;
+    }
+
+    @Override
+    @Transactional
+    public GiftCertificate updateDuration(long id, int duration, LocalDateTime currentDate) throws DaoWrongIdException {
+        if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, id) == 0) {
+            throw new DaoWrongIdException(id, RESOURCE_NAME);
+        }
+        Object[] args = new Object[] {duration,
+                                      convertLocalDateTimeToTimestamp(currentDate),
+                                      id};
+        jdbcTemplate.update(UPDATE_DURATION_QUERY, args);
+        return findById(id);
     }
 
     private Timestamp convertLocalDateTimeToTimestamp (LocalDateTime ldt) {

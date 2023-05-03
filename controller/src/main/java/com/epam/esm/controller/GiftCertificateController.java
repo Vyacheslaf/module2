@@ -1,9 +1,10 @@
 package com.epam.esm.controller;
 
+import com.epam.esm.dto.DurationDto;
 import com.epam.esm.exception.controller.InvalidRequestException;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.service.ServiceException;
-import com.epam.esm.service.Service;
+import com.epam.esm.service.GiftCertificateService;
 import com.epam.esm.util.RequestParametersHolder;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.util.SortBy;
@@ -23,12 +24,12 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/certificate")
-@Validated
+//@Validated
 public class GiftCertificateController {
-    private final Service<GiftCertificate> giftCertificateService;
+    private final GiftCertificateService giftCertificateService;
 
     @Autowired
-    public GiftCertificateController(Service<GiftCertificate> giftCertificateService) {
+    public GiftCertificateController(GiftCertificateService giftCertificateService) {
         this.giftCertificateService = giftCertificateService;
     }
 
@@ -259,5 +260,20 @@ public class GiftCertificateController {
     public ResponseEntity<GiftCertificate> delete(@PathVariable long id) throws ServiceException, DaoException {
         giftCertificateService.delete(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GiftCertificate> updateDuration(@PathVariable long id,
+                                                          @Valid @RequestBody DurationDto dto,
+                                                          BindingResult bindingResult,
+                                                          UriComponentsBuilder ucb)
+            throws ServiceException, DaoException {
+        if (bindingResult.hasErrors()) {
+            throw new InvalidRequestException(bindingResult);
+        }
+        GiftCertificate certificate = giftCertificateService.updateDuration(id, dto.getDuration());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(ucb.path("/certificate/{id}").buildAndExpand(id).toUri());
+        return new ResponseEntity<>(certificate, headers, HttpStatus.OK);
     }
 }

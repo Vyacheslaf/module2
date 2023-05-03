@@ -1,12 +1,14 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dao.Dao;
-import com.epam.esm.dao.sql.GiftCertificateDao;
+import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.dao.DaoWrongIdException;
 import com.epam.esm.exception.service.ServiceException;
 import com.epam.esm.service.GiftCertificateService;
+import com.epam.esm.service.GiftCertificateServiceImpl;
 import com.epam.esm.service.Service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,8 @@ public class GiftCertificateControllerTest {
                                                              .addScript("test/schema.sql")
                                                              .addScript("test/data.sql")
                                                              .build();
-        Dao<GiftCertificate> dao = new GiftCertificateDao(dataSource);
-        Service<GiftCertificate> service = new GiftCertificateService(dao);
+        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
+        GiftCertificateService service = new GiftCertificateServiceImpl(dao);
         controller = new GiftCertificateController(service);
     }
 
