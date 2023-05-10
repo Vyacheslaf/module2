@@ -11,6 +11,7 @@ import org.springframework.web.context.annotation.RequestScope;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -55,8 +56,11 @@ public class GiftCertificateServiceImpl extends AbstractService<GiftCertificate>
     }
 
     private void checkTags(GiftCertificate certificate) throws ServiceWrongTagNameException {
+        if (certificate.getTags() == null) {
+            certificate.setTags(new HashSet<>());
+        }
         Set<Tag> tags = certificate.getTags();
-        if (!certificate.getTags().isEmpty() && tags.stream().map(Tag::getName).filter(Objects::isNull).count() != 0) {
+        if (!tags.isEmpty() && tags.stream().map(Tag::getName).filter(Objects::isNull).count() != 0) {
             throw new ServiceWrongTagNameException();
         }
     }

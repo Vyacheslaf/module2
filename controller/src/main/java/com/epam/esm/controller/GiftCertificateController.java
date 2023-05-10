@@ -1,16 +1,18 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dto.DurationDto;
-import com.epam.esm.exception.controller.InvalidRequestException;
+import com.epam.esm.util.GiftCertificateSortMap;
+import com.epam.esm.dto.GiftCertificateDuration;
+import com.epam.esm.entity.Tag;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.service.ServiceException;
 import com.epam.esm.service.GiftCertificateService;
-import com.epam.esm.util.RequestParametersHolder;
+import com.epam.esm.service.TagService;
+import com.epam.esm.util.*;
 import com.epam.esm.entity.GiftCertificate;
-import com.epam.esm.util.SortBy;
-import com.epam.esm.util.SortDir;
+import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,16 +23,25 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/certificate")
-//@Validated
+@Validated
 public class GiftCertificateController {
     private final GiftCertificateService giftCertificateService;
+    private final TagService tagService;
+    private final GiftCertificateSortMap giftCertificateSortMap;
 
     @Autowired
-    public GiftCertificateController(GiftCertificateService giftCertificateService) {
+    public GiftCertificateController(GiftCertificateService giftCertificateService, TagService tagService,
+                                     GiftCertificateSortMap giftCertificateSortMap) {
         this.giftCertificateService = giftCertificateService;
+        this.tagService = tagService;
+        this.giftCertificateSortMap = giftCertificateSortMap;
     }
 
     /**
@@ -70,28 +81,37 @@ public class GiftCertificateController {
      *                                              {"id":number,"tagName":"string"},...]},
      *                                      ...]
      *
-     * @param tagName Request parameter for search by {@code Tag.tagName}
+     * @param tag Request parameter for search by {@code Tag.tagName}
      * @param search Request parameter for search by part of {@code GiftCertificate.name}
      *               or {@code GiftCertificate.description}
-     * @param sortBy Request parameter for sort by {@code GiftCertificate.name} or {@code GiftCertificate.createDate}
-     * @param sortDir Request parameter for select sort direction {@code asc} | {@code | desc}
+     * param sortBy Request parameter for sort by {@code GiftCertificate.name} or {@code GiftCertificate.createDate}
+     * param sortDir Request parameter for select sort direction {@code asc} | {@code | desc}
      * @return List of {@code GiftCertificate} with Http Status 200
      *          or empty response with Http Status 204 if any {@code Tag} was not found
      * @throws DaoException
      * @throws ServiceException
      */
-    @GetMapping
-    public ResponseEntity<List<GiftCertificate>> findAll(@RequestParam(required = false) String tagName,
-                                                         @RequestParam(required = false) String search,
-                                                         @RequestParam(required = false) List<SortBy> sortBy,
-                                                         @RequestParam(required = false) List<SortDir> sortDir)
-            throws ServiceException, DaoException {
-        RequestParametersHolder rph = new RequestParametersHolder(tagName, search, sortBy, sortDir);
+    @JsonView(Views.ShortView.class)
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping(produces = { "application/hal+json" })
+    public CollectionModel<GiftCertificate> findAll(
+            @RequestParam(required = false) List<String> tag,
+            @RequestParam(required = false) String search,
+//            @Pattern(regexp = SortByStringParser.SORT_PATTERN, message = SortByStringParser.SORT_REGEX_ERROR_MESSAGE)
+            @RequestParam(required = false) List<String> sort,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "5") Integer size) throws DaoException, ServiceException {
+        Map<String, String> sortMap = giftCertificateSortMap.getSortMap(sort);
+        RequestParametersHolder rph = new RequestParametersHolder(tag, search, sortMap, page, size);
         List<GiftCertificate> giftCertificates = giftCertificateService.findAll(rph);
-        if (giftCertificates.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        for (GiftCertificate giftCertificate : giftCertificates) {
+            Link link = linkTo(methodOn(GiftCertificateController.class).findById(giftCertificate.getId()))
+                        .withSelfRel();
+            giftCertificate.add(link);
         }
-        return new ResponseEntity<>(giftCertificates, HttpStatus.OK);
+        Link link = linkTo(methodOn(GiftCertificateController.class).findAll(tag, search, sort, page, size))
+                    .withSelfRel();
+        return CollectionModel.of(giftCertificates, link);
     }
 
     /**
@@ -123,11 +143,43 @@ public class GiftCertificateController {
      * @throws DaoException if the {@code GiftCertificate} with such {@code id} not found
      * @throws ServiceException
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<GiftCertificate> findById(@PathVariable long id)
-            throws ServiceException, DaoException {
+    @JsonView(Views.FullView.class)
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping(value = "/{id}", produces = { "application/hal+json" })
+    public GiftCertificate findById(@PathVariable long id) throws ServiceException, DaoException {
         GiftCertificate certificate = giftCertificateService.findById(id);
-        return new ResponseEntity<>(certificate, HttpStatus.OK);
+        certificate.add(linkTo(GiftCertificateController.class).slash(id).withSelfRel());
+        certificate.add(linkTo(methodOn(GiftCertificateController.class)
+                                .findAll(null, null, null, null, null))
+                        .withRel(LinkRelation.of("parent")));
+        certificate.add(linkTo(methodOn(GiftCertificateController.class)
+                                .findGiftCertificateTags(id, null, null))
+                        .withRel(IanaLinkRelations.COLLECTION));
+        return certificate;
+    }
+
+    @JsonView(Views.ShortView.class)
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping(value = "/{id}/tag", produces = { "application/hal+json" })
+    public CollectionModel<Tag> findGiftCertificateTags(
+            @PathVariable long id,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "5") Integer size) throws DaoException, ServiceException {
+        RequestParametersHolder rph = new RequestParametersHolder();
+        rph.setPage(page);
+        rph.setSize(size);
+        List<Tag> tags = tagService.findGiftCertificateTags(id, rph);
+        for (Tag tag : tags) {
+            Link link = linkTo(methodOn(TagController.class).findById(tag.getId())).withSelfRel();
+            tag.add(link);
+        }
+
+        Link selflink = linkTo(methodOn(GiftCertificateController.class).findGiftCertificateTags(id, page, size))
+                        .withSelfRel();
+        Link userLink = linkTo(methodOn(GiftCertificateController.class).findById(id))
+                        .withRel(LinkRelation.of("parent"));
+        CollectionModel<Tag> collectionModel = CollectionModel.of(tags, selflink, userLink);
+        return collectionModel;
     }
 
     /**
@@ -170,24 +222,19 @@ public class GiftCertificateController {
      * @throws ServiceException
      * @throws DaoException
      */
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @JsonView(Views.FullView.class)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = { "application/hal+json" })
     public ResponseEntity<GiftCertificate> create(@Valid @RequestBody GiftCertificate certificate,
                                                   BindingResult bindingResult,
-                                                  UriComponentsBuilder ucb)
-            throws ServiceException, DaoException {
-        if (bindingResult.hasErrors()) {
-            throw new InvalidRequestException(bindingResult);
-        }
+                                                  UriComponentsBuilder ucb) throws ServiceException, DaoException {
         certificate = giftCertificateService.create(certificate);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(ucb.path("/certificate/{id}").buildAndExpand(certificate.getId()).toUri());
-        return new ResponseEntity<>(certificate, headers, HttpStatus.CREATED);
+        return getResponseEntity(certificate, ucb, HttpStatus.CREATED);
     }
 
     /**
      * Update {@code GiftCertificate} with selected {@code id}
      *
-     * PUT /certificate/{id}:
+     * PATCH /certificate/{id}:
      *      Request:
      *          Content-Type: application/json
      *          Request Body: com.epam.esm.GiftCertificate
@@ -225,16 +272,14 @@ public class GiftCertificateController {
      * @throws ServiceException
      * @throws DaoException
      */
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @JsonView(Views.FullView.class)
+    @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = { "application/hal+json" })
     public ResponseEntity<GiftCertificate> update(@PathVariable long id,
                                                   @RequestBody GiftCertificate certificate,
-                                                  UriComponentsBuilder ucb)
-            throws ServiceException, DaoException {
+                                                  UriComponentsBuilder ucb) throws ServiceException, DaoException {
         certificate.setId(id);
         certificate = giftCertificateService.update(certificate);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(ucb.path("/certificate/{id}").buildAndExpand(id).toUri());
-        return new ResponseEntity<>(certificate, headers, HttpStatus.OK);
+        return getResponseEntity(certificate, ucb, HttpStatus.OK);
     }
 
     /**
@@ -256,24 +301,40 @@ public class GiftCertificateController {
      * @throws DaoException
      * @throws ServiceException
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<GiftCertificate> delete(@PathVariable long id) throws ServiceException, DaoException {
+    @ResponseStatus(HttpStatus.OK)
+    @DeleteMapping(value = "/{id}", produces = { "application/hal+json" })
+    public RepresentationModel<?> delete(@PathVariable long id) throws ServiceException, DaoException {
         giftCertificateService.delete(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return  new RepresentationModel<>()
+                    .add(linkTo(methodOn(GiftCertificateController.class)
+                                .findAll(null, null, null, null, null))
+                            .withRel("parent"));
     }
 
-    @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<GiftCertificate> updateDuration(@PathVariable long id,
-                                                          @Valid @RequestBody DurationDto dto,
-                                                          BindingResult bindingResult,
-                                                          UriComponentsBuilder ucb)
-            throws ServiceException, DaoException {
-        if (bindingResult.hasErrors()) {
-            throw new InvalidRequestException(bindingResult);
-        }
+    @JsonView(Views.FullView.class)
+    @PatchMapping(value = "/{id}/duration",
+                  consumes = MediaType.APPLICATION_JSON_VALUE,
+                  produces = { "application/hal+json" })
+    public ResponseEntity<GiftCertificate> updateDuration(
+            @PathVariable long id,
+            @Valid @RequestBody GiftCertificateDuration dto,
+            BindingResult bindingResult,
+            UriComponentsBuilder ucb) throws ServiceException, DaoException {
         GiftCertificate certificate = giftCertificateService.updateDuration(id, dto.getDuration());
+        return getResponseEntity(certificate, ucb, HttpStatus.OK);
+    }
+
+    private ResponseEntity<GiftCertificate> getResponseEntity(
+            GiftCertificate certificate,
+            UriComponentsBuilder ucb,
+            HttpStatus httpStatus) throws ServiceException, DaoException {
+        certificate.add(linkTo(GiftCertificateController.class).slash(certificate.getId()).withSelfRel());
+        certificate.add(linkTo(GiftCertificateController.class).withRel(LinkRelation.of("parent")));
+        certificate.add(linkTo(methodOn(GiftCertificateController.class)
+                                .findGiftCertificateTags(certificate.getId(), null, null))
+                        .withRel(IanaLinkRelations.COLLECTION));
         HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(ucb.path("/certificate/{id}").buildAndExpand(id).toUri());
-        return new ResponseEntity<>(certificate, headers, HttpStatus.OK);
+        headers.setLocation(ucb.path("/certificate/{id}").buildAndExpand(certificate.getId()).toUri());
+        return new ResponseEntity<>(certificate, headers, httpStatus);
     }
 }

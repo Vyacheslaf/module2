@@ -1,6 +1,7 @@
 package com.epam.esm.service;
 
 import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.util.GiftCertificateSortMap;
 import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.Tag;
@@ -33,6 +34,7 @@ public class GiftCertificateServiceTest {
     private static List<GiftCertificate> giftCertificates;
     private DataSource dataSource;
     private Service<GiftCertificate> service;
+    private static GiftCertificateSortMap giftCertificateSortMap;
 
     @BeforeAll
     public static void prepareMockDao() {
@@ -44,6 +46,10 @@ public class GiftCertificateServiceTest {
             certificate.setId(i);
             giftCertificates.add(certificate);
         }
+        Map<String, String> map = new HashMap<>();
+        map.put("name", "gc.name");
+        map.put("date", "gc.create_date");
+        giftCertificateSortMap = new GiftCertificateSortMap(map);
     }
     @BeforeEach
     public void prepareDataSource() {
@@ -52,7 +58,7 @@ public class GiftCertificateServiceTest {
                                                   .addScript("test/schema.sql")
                                                   .addScript("test/data.sql")
                                                   .build();
-        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
+        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource, giftCertificateSortMap);
         service = new GiftCertificateServiceImpl(dao);
     }
 
@@ -147,8 +153,8 @@ public class GiftCertificateServiceTest {
         assertEquals(expectedValue, service.create(certificate).getId());
         assertEquals(expectedValue, service.findAll(new RequestParametersHolder()).size());
 
-        certificate.addTag(new Tag(0, "tag1"));
-        certificate.addTag(new Tag(0, "tag22"));
+        certificate.getTags().add(new Tag(0, "tag1"));
+        certificate.getTags().add(new Tag(0, "tag22"));
 
         expectedValue++;
         assertEquals(expectedValue, service.create(certificate).getId());
@@ -163,8 +169,8 @@ public class GiftCertificateServiceTest {
         LocalDateTime ldt = LocalDateTime.parse("2001-01-01T01:01:01.001");
         GiftCertificate expected = new GiftCertificate(id, "name1", "description1",
                                                     111, 11, ldt, ldt, new LinkedHashSet<>());
-        expected.addTag(new Tag(1, "tag1"));
-        expected.addTag(new Tag(3, "tag3"));
+        expected.getTags().add(new Tag(1, "tag1"));
+        expected.getTags().add(new Tag(3, "tag3"));
 
         assertEquals(expected, service.findById(id));
     }
@@ -182,8 +188,8 @@ public class GiftCertificateServiceTest {
 
         GiftCertificate expected = new GiftCertificate(id, newName, "description1", 111, 11,
                                                         createLdt, updateLdt, new LinkedHashSet<>());
-        expected.addTag(new Tag(1, "tag1"));
-        expected.addTag(new Tag(3, "tag3"));
+        expected.getTags().add(new Tag(1, "tag1"));
+        expected.getTags().add(new Tag(3, "tag3"));
 
         assertEquals(expected, service.update(certificate));
 
@@ -191,10 +197,10 @@ public class GiftCertificateServiceTest {
         certificate.setId(id);
         certificate.setLastUpdateDate(updateLdt);
         certificate.setTags(new LinkedHashSet<>());
-        certificate.addTag(new Tag(0, "tag4"));
+        certificate.getTags().add(new Tag(0, "tag4"));
 
         expected.setTags(new LinkedHashSet<>());
-        expected.addTag(new Tag(4, "tag4"));
+        expected.getTags().add(new Tag(4, "tag4"));
 
         assertEquals(expected, service.update(certificate));
     }

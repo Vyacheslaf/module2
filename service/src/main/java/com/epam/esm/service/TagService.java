@@ -1,23 +1,15 @@
 package com.epam.esm.service;
 
-import com.epam.esm.dao.Dao;
 import com.epam.esm.entity.Tag;
+import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.service.ServiceException;
-import com.epam.esm.exception.service.ServiceUnsupportedOperationException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.context.annotation.RequestScope;
+import com.epam.esm.util.RequestParametersHolder;
 
-@Service
-@RequestScope
-public class TagService extends AbstractService<Tag> {
-    @Autowired
-    public TagService(Dao<Tag> tagDao) {
-        super(tagDao);
-    }
+import java.util.List;
 
-    @Override
-    public Tag update(Tag entity) throws ServiceException {
-        throw new ServiceUnsupportedOperationException();
-    }
+public interface TagService extends Service<Tag> {
+    Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId) throws ServiceException, DaoException;
+    List<Tag> findGiftCertificateTags(long giftCertificateId,
+                                      RequestParametersHolder rph) throws ServiceException, DaoException;
 }
+

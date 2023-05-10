@@ -1,16 +1,20 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dao.Dao;
+import com.epam.esm.dao.TagDao;
 import com.epam.esm.dao.sql.TagDaoImpl;
 import com.epam.esm.entity.Tag;
 import com.epam.esm.exception.dao.DaoDuplicateKeyException;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.dao.DaoWrongIdException;
 import com.epam.esm.exception.service.ServiceException;
-import com.epam.esm.service.Service;
 import com.epam.esm.service.TagService;
+import com.epam.esm.service.TagServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.LinkRelation;
+import org.springframework.hateoas.RepresentationModel;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 public class TagControllerTest {
 
@@ -39,15 +45,17 @@ public class TagControllerTest {
                                                              .addScript("test/schema.sql")
                                                              .addScript("test/data.sql")
                                                              .build();
-        Dao<Tag> tagDao = new TagDaoImpl(dataSource);
-        Service<Tag> tagService = new TagService(tagDao);
+        TagDao tagDao = new TagDaoImpl(dataSource);
+        TagService tagService = new TagServiceImpl(tagDao);
         controller = new TagController(tagService);
     }
 
     @Test
     public void deleteTest() throws ServiceException, DaoException {
         long id = 1;
-        assertEquals(new ResponseEntity<>(HttpStatus.NO_CONTENT), controller.delete(id));
+        assertEquals(ResponseEntity.ok(new RepresentationModel<>()
+                                    .add(linkTo(methodOn(TagController.class).findAll(0, 5)).withRel("rrr"))),
+                     controller.delete(id));
     }
 
     @Test
@@ -75,12 +83,18 @@ public class TagControllerTest {
             Tag tag = new Tag();
             tag.setName("tag" + i);
             tag.setId(i);
+            Link link = linkTo(methodOn(TagController.class).findById(i)).withSelfRel();
+            tag.add(link);
             tagList.add(tag);
         }
 
-        ResponseEntity<List<Tag>> actualEntity = controller.findAll();
+        int page = 0;
+        int size = 1000;
+        ResponseEntity<CollectionModel<Tag>> actualEntity = controller.findAll(page, size);
 
-        ResponseEntity<List<Tag>> expectedEntity = new ResponseEntity<>(tagList, HttpStatus.OK);
+        Link link = linkTo(methodOn(TagController.class).findAll(page, size)).withSelfRel();
+        CollectionModel<Tag> collectionModel = CollectionModel.of(tagList, link);
+        ResponseEntity<CollectionModel<Tag>> expectedEntity = new ResponseEntity<>(collectionModel, HttpStatus.OK);
 
         assertEquals(expectedEntity, actualEntity);
     }
@@ -91,9 +105,13 @@ public class TagControllerTest {
             controller.delete(i);
         }
 
-        ResponseEntity<List<Tag>> actualEntity = controller.findAll();
+        int page = 0;
+        int size = 1000;
+        ResponseEntity<CollectionModel<Tag>> actualEntity = controller.findAll(page, size);
 
-        ResponseEntity<List<Tag>> expectedEntity = new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        Link link = linkTo(methodOn(TagController.class).findAll(page, size)).withSelfRel();
+        ResponseEntity<CollectionModel<Tag>> expectedEntity
+                = new ResponseEntity<>(CollectionModel.of(new ArrayList<Tag>(), link), HttpStatus.OK);
 
         assertEquals(expectedEntity, actualEntity);
     }
@@ -105,9 +123,11 @@ public class TagControllerTest {
         tag.setName("tag" + id);
         tag.setId(id);
 
-        ResponseEntity<Tag> actualEntity = controller.findById(id);
+        tag.add(linkTo(TagController.class).slash(id).withSelfRel());
+        tag.add(linkTo(TagController.class).withRel(LinkRelation.of("parent")));
+        Tag actualEntity = controller.findById(id);
 
-        ResponseEntity<Tag> expectedEntity = new ResponseEntity<>(tag, HttpStatus.OK);
+        Tag expectedEntity = tag;
 
         assertEquals(expectedEntity, actualEntity);
     }

@@ -5,15 +5,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
+import java.util.*;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class RequestParametersHolder {
-    private String tagName;
+    private List<String> tags;
     private String search;
-    private List<SortBy> sortByList;
-    private List<SortDir> sortDirList;
+    private Map<String, String> sortMap;// = new LinkedHashMap<>();
+    private Integer page;
+    private Integer size;
+
+    public RequestParametersHolder(Integer page, Integer size) {
+        this.page = page;
+        this.size = size;
+    }
 }

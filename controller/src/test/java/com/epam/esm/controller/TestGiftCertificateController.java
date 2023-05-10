@@ -1,13 +1,16 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dao.Dao;
 import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.util.GiftCertificateSortMap;
+import com.epam.esm.dao.TagDao;
 import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
-import com.epam.esm.entity.GiftCertificate;
+import com.epam.esm.dao.sql.TagDaoImpl;
 import com.epam.esm.exception.GlobalExceptionHandler;
 import com.epam.esm.service.GiftCertificateService;
 import com.epam.esm.service.GiftCertificateServiceImpl;
-import com.epam.esm.service.Service;
+import com.epam.esm.service.TagService;
+import com.epam.esm.service.TagServiceImpl;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +29,9 @@ import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -34,7 +40,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebAppConfiguration
 public class TestGiftCertificateController {
     private MockMvc mockMvc;
-    private GiftCertificateService service;
+    private GiftCertificateService giftCertificateService;
+    private TagService tagService;
+    private GiftCertificateSortMap giftCertificateSortMap;
+
+    @BeforeAll
+    public void setupMap() {
+        Map<String, String> map = new HashMap<>();
+        map.put("name", "gc.name");
+        map.put("date", "gc.create_date");
+        giftCertificateSortMap = new GiftCertificateSortMap(map);
+    }
 
     @BeforeEach
     public void setup() throws Exception {
@@ -43,9 +59,12 @@ public class TestGiftCertificateController {
                 .addScript("test/schema.sql")
                 .addScript("test/data.sql")
                 .build();
-        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
-        service = new GiftCertificateServiceImpl(dao);
-        mockMvc = MockMvcBuilders.standaloneSetup(new GiftCertificateController(service))
+        GiftCertificateDao giftCertificateDao = new GiftCertificateDaoImpl(dataSource, giftCertificateSortMap);
+        giftCertificateService = new GiftCertificateServiceImpl(giftCertificateDao);
+        TagDao tagDao = new TagDaoImpl(dataSource);
+        tagService = new TagServiceImpl(tagDao);
+        mockMvc = MockMvcBuilders.standaloneSetup(new GiftCertificateController(giftCertificateService, tagService,
+                                                                                giftCertificateSortMap))
                                  .setControllerAdvice(new GlobalExceptionHandler())
                                  .build();
     }
@@ -158,7 +177,7 @@ public class TestGiftCertificateController {
     public void updateTest() throws Exception {
         String jsonBody = "{\"tags\":[{\"tagName\":\"new_tag\"}]}";
 
-        mockMvc.perform(put("/certificate/{id}", 1)
+        mockMvc.perform(patch("/certificate/{id}", 1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonBody))
                 .andExpect(status().isOk())

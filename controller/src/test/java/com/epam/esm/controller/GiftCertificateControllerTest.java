@@ -1,17 +1,19 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dao.Dao;
 import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.util.GiftCertificateSortMap;
+import com.epam.esm.dao.TagDao;
 import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
+import com.epam.esm.dao.sql.TagDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.dao.DaoWrongIdException;
 import com.epam.esm.exception.service.ServiceException;
-import com.epam.esm.service.GiftCertificateService;
-import com.epam.esm.service.GiftCertificateServiceImpl;
-import com.epam.esm.service.Service;
+import com.epam.esm.service.*;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -21,7 +23,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.sql.DataSource;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +32,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class GiftCertificateControllerTest {
 
     private static GiftCertificateController controller;
+    private GiftCertificateSortMap giftCertificateSortMap;
+
+    @BeforeAll
+    public void setupMap() {
+        Map<String, String> map = new HashMap<>();
+        map.put("name", "gc.name");
+        map.put("date", "gc.create_date");
+        giftCertificateSortMap = new GiftCertificateSortMap(map);
+    }
 
     @BeforeEach
     public void prepareDataSource() {
@@ -37,9 +49,11 @@ public class GiftCertificateControllerTest {
                                                              .addScript("test/schema.sql")
                                                              .addScript("test/data.sql")
                                                              .build();
-        GiftCertificateDao dao = new GiftCertificateDaoImpl(dataSource);
-        GiftCertificateService service = new GiftCertificateServiceImpl(dao);
-        controller = new GiftCertificateController(service);
+        GiftCertificateDao giftCertificateDao = new GiftCertificateDaoImpl(dataSource, giftCertificateSortMap);
+        GiftCertificateService giftCertificateService = new GiftCertificateServiceImpl(giftCertificateDao);
+        TagDao tagDao = new TagDaoImpl(dataSource);
+        TagService tagService = new TagServiceImpl(tagDao);
+        controller = new GiftCertificateController(giftCertificateService, tagService, giftCertificateSortMap);
     }
 
     @Test
@@ -65,10 +79,10 @@ public class GiftCertificateControllerTest {
 
     @Test
     public void findAllNotEmptyTest() throws ServiceException, DaoException {
-        ResponseEntity<List<GiftCertificate>> actualEntity;
-        actualEntity = controller.findAll(null, null, null, null);
+        CollectionModel<GiftCertificate> actualModel;
+        actualModel = controller.findAll(null, null, null, 0, 5);
 
-        assertEquals(HttpStatus.OK, actualEntity.getStatusCode());
+        assertEquals(2, actualModel.getContent().size());
     }
 
     @Test
@@ -77,19 +91,19 @@ public class GiftCertificateControllerTest {
         controller.delete(++i);
         controller.delete(++i);
 
-        ResponseEntity<List<GiftCertificate>> actualEntity;
-        actualEntity = controller.findAll(null, null, null, null);
+        CollectionModel<GiftCertificate> actualModel;
+        actualModel = controller.findAll(null, null, null, 0, 5);
 
-        assertEquals(HttpStatus.NO_CONTENT, actualEntity.getStatusCode());
+        assertEquals(0, actualModel.getContent().size());
     }
 
     @Test
     public void findByIdTest() throws ServiceException, DaoException {
         long id = 1;
 
-        ResponseEntity<GiftCertificate> actualEntity = controller.findById(id);
+        GiftCertificate actualEntity = controller.findById(id);
 
-        assertEquals(HttpStatus.OK, actualEntity.getStatusCode());
+        assertEquals("name1", actualEntity.getName());
     }
 
     @Test

@@ -1,20 +1,24 @@
 package com.epam.esm.entity;
 
+import com.epam.esm.util.Views;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonView;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.springframework.hateoas.RepresentationModel;
 
 import java.io.Serializable;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Tag implements Serializable {
+//@JsonPropertyOrder({"id", "name"})
+public class Tag extends RepresentationModel<Tag> implements Serializable {
+    @JsonView(Views.FullView.class)
     private long id;
-    @NotNull
-    @JsonProperty("tagName")
+    @JsonView(Views.ShortView.class)
+    @NotBlank(message = "name of tag must not be empty")
+//    @JsonProperty("tagName")
     private String name;
 }

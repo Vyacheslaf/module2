@@ -1,13 +1,15 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.entity.Tag;
-import com.epam.esm.exception.controller.InvalidRequestException;
 import com.epam.esm.exception.dao.DaoException;
 import com.epam.esm.exception.service.ServiceException;
 import com.epam.esm.service.Service;
 import com.epam.esm.util.RequestParametersHolder;
+import com.epam.esm.util.Views;
+import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/tag")
@@ -49,13 +54,23 @@ public class TagController {
      * @throws DaoException
      * @throws ServiceException
      */
-    @GetMapping
-    public ResponseEntity<List<Tag>> findAll() throws DaoException, ServiceException {
-        List<Tag> tags = tagService.findAll(new RequestParametersHolder());
-        if (tags.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    @JsonView(Views.ShortView.class)
+    @GetMapping(produces = { "application/hal+json" })
+    public ResponseEntity<CollectionModel<Tag>> findAll(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "5") Integer size) throws DaoException, ServiceException {
+        RequestParametersHolder rph = new RequestParametersHolder();
+        rph.setPage(page);
+        rph.setSize(size);
+        List<Tag> tags = tagService.findAll(rph);
+        for (Tag tag : tags) {
+            Link link = linkTo(methodOn(TagController.class).findById(tag.getId())).withSelfRel();
+            tag.add(link);
         }
-        return new ResponseEntity<>(tags, HttpStatus.OK);
+
+        Link link = linkTo(methodOn(TagController.class).findAll(page, size)).withSelfRel();
+        CollectionModel<Tag> collectionModel = CollectionModel.of(tags, link);
+        return new ResponseEntity<>(collectionModel, HttpStatus.OK);
     }
 
     /**
@@ -77,9 +92,14 @@ public class TagController {
      * @throws DaoException if the {@code Tag} with such {@code id} not found
      * @throws ServiceException
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<Tag> findById(@PathVariable long id) throws DaoException, ServiceException {
-        return new ResponseEntity<>(tagService.findById(id), HttpStatus.OK);
+    @JsonView(Views.FullView.class)
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping(value = "/{id}", produces = { "application/hal+json" })
+    public Tag findById(@PathVariable long id) throws DaoException, ServiceException {
+        Tag tag = tagService.findById(id);
+        tag.add(linkTo(TagController.class).slash(id).withSelfRel());
+        tag.add(linkTo(TagController.class).withRel(LinkRelation.of("parent")));
+        return tag;
     }
 
     /**
@@ -106,15 +126,15 @@ public class TagController {
      * @throws DaoException if the {@code Tag} with such {@code tagName} already exists
      * @throws ServiceException
      */
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @JsonView(Views.FullView.class)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = { "application/hal+json" })
     public ResponseEntity<Tag> create(@Valid @RequestBody Tag tag,
                                       BindingResult bindingResult,
                                       UriComponentsBuilder ucb)
             throws DaoException, ServiceException {
-        if (bindingResult.hasErrors()) {
-            throw new InvalidRequestException("Field tagName cannot be null");
-        }
         tag = tagService.create(tag);
+        tag.add(linkTo(TagController.class).slash(tag.getId()).withSelfRel());
+        tag.add(linkTo(TagController.class).withRel(LinkRelation.of("parent")));
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(ucb.path("/tag/{id}").buildAndExpand(tag.getId()).toUri());
         return new ResponseEntity<>(tag, headers, HttpStatus.CREATED);
@@ -139,10 +159,12 @@ public class TagController {
      * @throws DaoException
      * @throws ServiceException
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Tag> delete(@PathVariable long id) throws DaoException, ServiceException {
+    @ResponseStatus(HttpStatus.OK)
+    @DeleteMapping(value = "/{id}", produces = { "application/hal+json" })
+    public RepresentationModel<?> delete(@PathVariable long id) throws DaoException, ServiceException {
         tagService.delete(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new RepresentationModel<>().add(linkTo(methodOn(TagController.class).findAll(null, null))
+                                                .withRel("parent"));
     }
 
 }

@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class DurationDto {
-    @NotNull
+public class GiftCertificateDuration {
+    @NotNull(message = "duration must not be null")
     private Integer duration;
 }

@@ -1,26 +1,26 @@
 package com.epam.esm.config;
 
-import com.epam.esm.util.CaseInsensitiveEnumConverter;
-import com.epam.esm.util.SortBy;
-import com.epam.esm.util.SortDir;
+import com.epam.esm.util.GiftCertificateSortMap;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
-import org.springframework.format.FormatterRegistry;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.sql.DataSource;
-import java.util.List;
+import java.util.Map;
 
 @Configuration
 @PropertySource("classpath:datasource.properties")
-public class RestApiConfig implements WebMvcConfigurer {
-//public class RestApiConfig {
+@PropertySource("classpath:sort.properties")
+public class RestApiConfig {
     @Autowired
     private Environment env;
+
+    @Value("#{${gift.certificate.sort.config}}")
+    private Map<String, String> map;
+
     @Bean(destroyMethod = "close")
     public DataSource dataSource() {
         HikariConfig hikariConfig = new HikariConfig();
@@ -41,10 +41,14 @@ public class RestApiConfig implements WebMvcConfigurer {
         return new HikariDataSource(hikariConfig);
     }
 
-    @Override
-    public void addFormatters(FormatterRegistry registry) {
-        List<Class<? extends Enum>> enums = List.of(SortBy.class, SortDir.class);
-        enums.forEach(enumClass -> registry.addConverter(String.class, enumClass,
-                new CaseInsensitiveEnumConverter<>(enumClass)));
+    @Bean
+    public GiftCertificateSortMap sortMap() {
+        return new GiftCertificateSortMap(map);
     }
+
+/*    @Bean
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+        return new Jackson2ObjectMapperBuilder().serializers(LOCAL_DATETIME_SERIALIZER);
+//                .serializationInclusion(JsonInclude.Include.NON_NULL);
+    }*/
 }

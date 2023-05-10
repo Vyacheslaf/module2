@@ -1,11 +1,8 @@
 package com.epam.esm.dao.sql;
 
-import com.epam.esm.dao.Dao;
+import com.epam.esm.dao.TagDao;
 import com.epam.esm.entity.Tag;
-import com.epam.esm.exception.dao.DaoDuplicateKeyException;
-import com.epam.esm.exception.dao.DaoException;
-import com.epam.esm.exception.dao.DaoUnsupportedOperationException;
-import com.epam.esm.exception.dao.DaoWrongIdException;
+import com.epam.esm.exception.dao.*;
 import com.epam.esm.util.RequestParametersHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -14,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.sql.DataSource;
@@ -24,13 +22,21 @@ import java.util.NoSuchElementException;
 
 @Repository
 @RequestScope
-public class TagDaoImpl implements Dao<Tag> {
-    private JdbcTemplate jdbcTemplate;
+public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     private static final String CREATE_QUERY = "INSERT INTO tag (name) VALUES (?)";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM tag WHERE id = ?";
-    private static final String FIND_ALL_QUERY = "SELECT * FROM tag ORDER BY name";
+    private static final String FIND_ALL_QUERY = "SELECT * FROM tag ORDER BY name LIMIT ? OFFSET ?";
     private static final String DELETE_QUERY = "DELETE FROM tag WHERE id = ?";
+    private static final String FIND_BY_USER_ID_QUERY = "SELECT t.id, t.name  FROM " +
+                            "(SELECT gift_certificate_id, cost FROM `order` WHERE user_id = ?) AS o " +
+                            "LEFT JOIN gift_certificate_tag gct ON o.gift_certificate_id = gct.gift_certificate_id " +
+                            "LEFT JOIN tag t ON gct.tag_id = t.id " +
+                            "GROUP BY gct.tag_id " +
+                            "ORDER BY SUM(cost) DESC " +
+                            "LIMIT 1";
+    private static final String CHECK_IF_CERTIFICATE_EXIST_QUERY = "SELECT COUNT(1) FROM gift_certificate WHERE id = ?";
     private static final String RESOURCE_NAME = "Tag";
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     public TagDaoImpl(DataSource dataSource) {
@@ -65,7 +71,8 @@ public class TagDaoImpl implements Dao<Tag> {
 
     @Override
     public List<Tag> findAll(RequestParametersHolder rph) {
-        return jdbcTemplate.query(FIND_ALL_QUERY, new BeanPropertyRowMapper<>(Tag.class));
+        return jdbcTemplate.query(FIND_ALL_QUERY, new BeanPropertyRowMapper<>(Tag.class),
+                                  rph.getSize(), getOffset(rph));
     }
 
     @Override
@@ -76,5 +83,26 @@ public class TagDaoImpl implements Dao<Tag> {
     @Override
     public void delete(long id) {
         jdbcTemplate.update(DELETE_QUERY, id);
+    }
+
+    @Override
+    public Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId) throws DaoException {
+        try {
+            return jdbcTemplate.query(FIND_BY_USER_ID_QUERY, new BeanPropertyRowMapper<>(Tag.class), userId)
+                    .stream().findAny().orElseThrow();
+        } catch (NoSuchElementException e) {
+            throw new DaoTagForUserNotFoundException(userId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public List<Tag> findGiftCertificateTags(long giftCertificateId, RequestParametersHolder rph) throws DaoException {
+        if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, giftCertificateId) == 0) {
+            throw new DaoWrongIdException(giftCertificateId, "GiftCertificate");
+        }
+        String FIND_GIFT_CERTIFICATE_TAGS_QUERY = "select * from tag where id in (select tag_id from gift_certificate_tag where gift_certificate_id = ?) limit ? offset ?";
+        return jdbcTemplate.query(FIND_GIFT_CERTIFICATE_TAGS_QUERY, new BeanPropertyRowMapper<>(Tag.class),
+                                  giftCertificateId, rph.getSize(), getOffset(rph));
     }
 }
