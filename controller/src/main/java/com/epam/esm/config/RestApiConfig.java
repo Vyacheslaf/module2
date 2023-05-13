@@ -1,15 +1,12 @@
 package com.epam.esm.config;
 
-import com.epam.esm.util.GiftCertificateSortMap;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
-import java.util.Map;
 
 @Configuration
 @PropertySource("classpath:datasource.properties")
@@ -17,9 +14,6 @@ import java.util.Map;
 public class RestApiConfig {
     @Autowired
     private Environment env;
-
-    @Value("#{${gift.certificate.sort.config}}")
-    private Map<String, String> map;
 
     @Bean(destroyMethod = "close")
     public DataSource dataSource() {
@@ -39,11 +33,6 @@ public class RestApiConfig {
         hikariConfig.addDataSourceProperty("dataSource.prepStmtCacheSize", "250");
         hikariConfig.addDataSourceProperty("dataSource.prepStmtCacheSqlLimit", "2048");
         return new HikariDataSource(hikariConfig);
-    }
-
-    @Bean
-    public GiftCertificateSortMap sortMap() {
-        return new GiftCertificateSortMap(map);
     }
 
 /*    @Bean

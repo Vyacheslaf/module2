@@ -7,6 +7,6 @@ import com.epam.esm.util.RequestParametersHolder;
 import java.util.List;
 
 public interface TagDao extends Dao<Tag> {
-    Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId) throws DaoException;
-    List<Tag> findGiftCertificateTags(long giftCertificateId, RequestParametersHolder rph) throws DaoException;
+    Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId);
+    List<Tag> findGiftCertificateTags(long giftCertificateId, RequestParametersHolder rph);
 }

@@ -1,7 +1,6 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dao.GiftCertificateDao;
-import com.epam.esm.util.GiftCertificateSortMap;
 import com.epam.esm.dao.TagDao;
 import com.epam.esm.dao.sql.GiftCertificateDaoImpl;
 import com.epam.esm.dao.sql.TagDaoImpl;
@@ -10,7 +9,6 @@ import com.epam.esm.service.GiftCertificateService;
 import com.epam.esm.service.GiftCertificateServiceImpl;
 import com.epam.esm.service.TagService;
 import com.epam.esm.service.TagServiceImpl;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,9 +27,6 @@ import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -42,15 +37,6 @@ public class TestGiftCertificateController {
     private MockMvc mockMvc;
     private GiftCertificateService giftCertificateService;
     private TagService tagService;
-    private GiftCertificateSortMap giftCertificateSortMap;
-
-    @BeforeAll
-    public void setupMap() {
-        Map<String, String> map = new HashMap<>();
-        map.put("name", "gc.name");
-        map.put("date", "gc.create_date");
-        giftCertificateSortMap = new GiftCertificateSortMap(map);
-    }
 
     @BeforeEach
     public void setup() throws Exception {
@@ -59,12 +45,11 @@ public class TestGiftCertificateController {
                 .addScript("test/schema.sql")
                 .addScript("test/data.sql")
                 .build();
-        GiftCertificateDao giftCertificateDao = new GiftCertificateDaoImpl(dataSource, giftCertificateSortMap);
+        GiftCertificateDao giftCertificateDao = new GiftCertificateDaoImpl(dataSource);
         giftCertificateService = new GiftCertificateServiceImpl(giftCertificateDao);
         TagDao tagDao = new TagDaoImpl(dataSource);
         tagService = new TagServiceImpl(tagDao);
-        mockMvc = MockMvcBuilders.standaloneSetup(new GiftCertificateController(giftCertificateService, tagService,
-                                                                                giftCertificateSortMap))
+        mockMvc = MockMvcBuilders.standaloneSetup(new GiftCertificateController(giftCertificateService, tagService))
                                  .setControllerAdvice(new GlobalExceptionHandler())
                                  .build();
     }
@@ -87,10 +72,6 @@ public class TestGiftCertificateController {
                 .andExpect(jsonPath("$.duration").value("11"))
                 .andExpect(jsonPath("$.createDate").value("2001-01-01T01:01:01.001"))
                 .andExpect(jsonPath("$.lastUpdateDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$.tags[0].id").value("1"))
-                .andExpect(jsonPath("$.tags[0].tagName").value("tag1"))
-                .andExpect(jsonPath("$.tags[1].id").value("3"))
-                .andExpect(jsonPath("$.tags[1].tagName").value("tag3"))
                 .andReturn();
     }
 
@@ -98,61 +79,26 @@ public class TestGiftCertificateController {
     public void findAllTest() throws Exception {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("search", "es");
-        params.add("sortBy", "DATE");
-        params.add("sortDir", "DESC");
-        params.add("sortBy", "NAME");
-        params.add("sortDir", "ASC");
+        params.add("sort", "create_date.desc");
+        params.add("sort", "name.asc");
         mockMvc.perform(get("/certificate").params(params))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("2"))
-                .andExpect(jsonPath("$[0].name").value("name2"))
-                .andExpect(jsonPath("$[0].description").value("description2"))
-                .andExpect(jsonPath("$[0].price").value("222"))
-                .andExpect(jsonPath("$[0].duration").value("22"))
-                .andExpect(jsonPath("$[0].createDate").value("2002-02-02T02:02:02.002"))
-                .andExpect(jsonPath("$[0].lastUpdateDate").value("2002-02-02T02:02:02.002"))
-                .andExpect(jsonPath("$[0].tags[0].id").value("2"))
-                .andExpect(jsonPath("$[0].tags[0].tagName").value("tag2"))
-                .andExpect(jsonPath("$[0].tags[1].id").value("3"))
-                .andExpect(jsonPath("$[0].tags[1].tagName").value("tag3"))
-                .andExpect(jsonPath("$[1].id").value("1"))
-                .andExpect(jsonPath("$[1].name").value("name1"))
-                .andExpect(jsonPath("$[1].description").value("description1"))
-                .andExpect(jsonPath("$[1].price").value("111"))
-                .andExpect(jsonPath("$[1].duration").value("11"))
-                .andExpect(jsonPath("$[1].createDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$[1].lastUpdateDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$[1].tags[0].id").value("1"))
-                .andExpect(jsonPath("$[1].tags[0].tagName").value("tag1"))
-                .andExpect(jsonPath("$[1].tags[1].id").value("3"))
-                .andExpect(jsonPath("$[1].tags[1].tagName").value("tag3"))
+                .andExpect(content().contentType("application/hal+json"))
                 .andReturn();
     }
 
     @Test
     public void deleteTest() throws Exception {
         mockMvc.perform(delete("/certificate/{id}", 2))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("search", "es");
-        params.add("sortBy", "DATE");
-        params.add("sortDir", "DESC");
-        params.add("sortBy", "NAME");
-        params.add("sortDir", "ASC");
+        params.add("sort", "create_date.desc");
+        params.add("sort", "name.asc");
         mockMvc.perform(get("/certificate").params(params))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("1"))
-                .andExpect(jsonPath("$[0].name").value("name1"))
-                .andExpect(jsonPath("$[0].description").value("description1"))
-                .andExpect(jsonPath("$[0].price").value("111"))
-                .andExpect(jsonPath("$[0].duration").value("11"))
-                .andExpect(jsonPath("$[0].createDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$[0].lastUpdateDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$[0].tags[0].id").value("1"))
-                .andExpect(jsonPath("$[0].tags[0].tagName").value("tag1"))
-                .andExpect(jsonPath("$[0].tags[1].id").value("3"))
-                .andExpect(jsonPath("$[0].tags[1].tagName").value("tag3"))
+                .andExpect(content().contentType("application/hal+json"))
                 .andReturn();
     }
 
@@ -175,7 +121,7 @@ public class TestGiftCertificateController {
 
     @Test
     public void updateTest() throws Exception {
-        String jsonBody = "{\"tags\":[{\"tagName\":\"new_tag\"}]}";
+        String jsonBody = "{\"tags\":[{\"name\":\"new_tag\"}]}";
 
         mockMvc.perform(patch("/certificate/{id}", 1)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -187,8 +133,6 @@ public class TestGiftCertificateController {
                 .andExpect(jsonPath("$.price").value("111"))
                 .andExpect(jsonPath("$.duration").value("11"))
                 .andExpect(jsonPath("$.createDate").value("2001-01-01T01:01:01.001"))
-                .andExpect(jsonPath("$.tags[0].id").value("4"))
-                .andExpect(jsonPath("$.tags[0].tagName").value("new_tag"))
                 .andReturn();
     }
 

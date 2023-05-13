@@ -1,5 +1,6 @@
 package com.epam.esm.exception;
 
+import com.epam.esm.exception.controller.NoContentException;
 import com.epam.esm.exception.dao.DaoDuplicateKeyException;
 import com.epam.esm.exception.dao.DaoTagForUserNotFoundException;
 import com.epam.esm.exception.dao.DaoWrongIdException;
@@ -133,8 +134,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidRequestException(ConstraintViolationException e) {
         String errorCode = "40003";
-//        ErrorResponse errorResponse = new ErrorResponse(e.getErrorMessage(), errorCode);
-//        List<String> errorMessage = new ArrayList<>(e.getConstraintViolations()).forEach();//.get(0).getMessage();
         StringJoiner joiner = new StringJoiner(", ");
         new ArrayList<>(e.getConstraintViolations()).forEach(cv -> joiner.add(cv.getMessage()));
         ErrorResponse errorResponse = new ErrorResponse(joiner.toString(), errorCode);
@@ -142,9 +141,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(InvalidSortRequestException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidSortRequestException() {
+    public ResponseEntity<ErrorResponse> handleInvalidSortRequestException(InvalidSortRequestException e) {
         String errorCode = "40004";
-        String errorMessage = "required format of sort parameter is: (name|date).(asc|desc)";
+        String errorMessage = "wrong format of sort parameter, required: " + e.getMessage();
         ErrorResponse errorResponse = new ErrorResponse(errorMessage, errorCode);
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -174,6 +173,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         String errorMessage = "name of tag can not be null or empty";
         ErrorResponse errorResponse = new ErrorResponse(errorMessage, errorCode);
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(NoContentException.class)
+    public ResponseEntity handleNoContentException() {
+        return new ResponseEntity(HttpStatus.NO_CONTENT);
     }
 
     /**

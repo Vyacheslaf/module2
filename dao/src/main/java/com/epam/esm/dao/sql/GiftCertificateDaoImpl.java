@@ -1,8 +1,8 @@
 package com.epam.esm.dao.sql;
 
 import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.exception.InvalidSortRequestException;
 import com.epam.esm.exception.InvalidTagNameException;
-import com.epam.esm.util.GiftCertificateSortMap;
 import com.epam.esm.util.RequestParametersHolder;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.Tag;
@@ -14,7 +14,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.annotation.RequestScope;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -22,8 +21,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Repository
-@RequestScope
-public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> implements GiftCertificateDao {
+public class GiftCertificateDaoImpl implements GiftCertificateDao {
     private static final String CREATE_QUERY = "INSERT INTO gift_certificate VALUES (DEFAULT, ?, ?, ?, ?, ?, ?)";
     private static final String FIND_BY_ID_QUERY = "SELECT gc.*, t.id AS tag_id, t.name AS tag_name " +
                                                    "FROM gift_certificate gc " +
@@ -31,26 +29,15 @@ public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> impleme
                                                         "ON gc.id = gct.gift_certificate_id " +
                                                    "LEFT JOIN tag t ON gct.tag_id = t.id " +
                                                    "WHERE gc.id = ? ";
-    private static final String SQL_ANY_SYMBOL = "%";
-    private static final String FIND_ALL_QUERY_OLD = "SELECT gc.id, gc.name FROM gift_certificate gc " +
-                                                 "LEFT JOIN gift_certificate_tag gct " +
-                                                 "ON gc.id = gct.gift_certificate_id " +
-                                                 "LEFT JOIN tag t ON gct.tag_id = t.id " +
-                                                 "WHERE ((gc.id IN (SELECT gct.gift_certificate_id " +
-                                                                 "FROM gift_certificate_tag gct " +
-                                                                 "LEFT JOIN tag t ON gct.tag_id = t.id " +
-                                                                 "WHERE t.name = COALESCE(?, t.name))) " +
-                                                    "OR IFNULL(?, gc.id IN (SELECT gc.id FROM gift_certificate gc)))" +
-                                                 "AND (CONCAT(gc.name, ' ', gc.description) LIKE ?) " +
-                                                 "GROUP BY gc.id ";
-    private static final String FIND_ALL_QUERY = "SELECT gc.id, gc.name FROM gift_certificate gc " +
-                                                 "WHERE gc.id IN (SELECT gct.gift_certificate_id " +
-                                                                 "FROM gift_certificate_tag gct ";
-    private static final String TAGS_QUERY_FIRST_PART = "LEFT JOIN tag t ON t.id = gct.tag_id WHERE t.name IN ";
+    private static final String FIND_ALL_QUERY = "SELECT gc.id, gc.name FROM gift_certificate gc ";
+    private static final String TAGS_QUERY_FIRST_PART = "gc.id IN (SELECT gct.gift_certificate_id " +
+                                                            "FROM gift_certificate_tag gct " +
+                                                            "LEFT JOIN tag t ON t.id = gct.tag_id WHERE t.name IN ";
     private static final String TAGS_QUERY_LAST_PART = "GROUP BY gct.gift_certificate_id HAVING COUNT(*) = ?) ";
-    private static final String SEARCH_QUERY = "AND (CONCAT(gc.name, ' ', gc.description) LIKE ?) ";
+    private static final String SEARCH_QUERY = "(CONCAT(gc.name, ' ', gc.description) LIKE ?) ";
+    private static final String WHERE_PREFIX = "WHERE ";
+    private static final String AND_DELIMITER = "AND ";
     private static final String ORDER_BY_QUERY = "ORDER BY ";
-    private static final String ORDER_BY_DELIMITER = ", ";
     private static final String LIMIT_OFFSET = "LIMIT ? OFFSET ?";
     private static final String CHECK_IF_CERTIFICATE_EXIST_QUERY = "SELECT COUNT(1) FROM gift_certificate WHERE id = ?";
     private static final String UPDATE_QUERY = "UPDATE gift_certificate " +
@@ -71,23 +58,22 @@ public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> impleme
                                                    "ON DUPLICATE KEY UPDATE tag.id = tag.id";
     private static final String GET_TAG_ID_BY_TAG_NAME_QUERY = "SELECT tag.id FROM tag WHERE tag.name = ?";
     private static final String DELETE_CERTIFICATE_BY_ID_QUERY = "DELETE FROM gift_certificate WHERE id = ?";
-    private static final String CERTIFICATE_ID_COLUMN_NAME = "id";
-    private static final String CERTIFICATE_NAME_COLUMN_NAME = "name";
-    private static final String CERTIFICATE_DESCRIPTION_COLUMN_NAME = "description";
-    private static final String CERTIFICATE_PRICE_COLUMN_NAME = "price";
-    private static final String CERTIFICATE_DURATION_COLUMN_NAME = "duration";
-    private static final String CERTIFICATE_CREATE_DATE_COLUMN_NAME = "create_date";
-    private static final String CERTIFICATE_LAST_UPDATE_DATE_COLUMN_NAME = "last_update_date";
-    private static final String TAG_NAME_COLUMN_NAME = "tag_name";
-    private static final String TAG_ID_COLUMN_NAME = "tag_id";
+    private static final String GIFT_CERTIFICATE_TABLE_SHORT_NAME = "gc.";
+    private static final String SQL_ANY_SYMBOL = "%";
+    private static final String COMMA_SPACE_DELIMITER = ", ";
+    private static final String SPACE_DELIMITER = " ";
+    private static final String SPACE_SUFFIX = " ";
+    private static final String BRACKET_SPACE_SUFFIX = ") ";
+    private static final String BRACKET_PREFIX = "(";
+    private static final String QUESTION_MARK = "?";
+    private static final String SORT_PATTERN = "^((name|create_date|last_update_date).(asc|desc)){1}$";
+    private static final String SORT_REPLACE_PATTERN = "\\.";
     private static final String RESOURCE_NAME = "GiftCertificate";
     private final JdbcTemplate jdbcTemplate;
-    private final GiftCertificateSortMap giftCertificateSortMap;
 
     @Autowired
-    public GiftCertificateDaoImpl(DataSource dataSource, GiftCertificateSortMap giftCertificateSortMap) {
+    public GiftCertificateDaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-        this.giftCertificateSortMap = giftCertificateSortMap;
     }
 
     @Override
@@ -111,7 +97,7 @@ public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> impleme
     }
 
     @Override
-    public GiftCertificate findById(long id) throws DaoWrongIdException {
+    public GiftCertificate findById(long id) {
         try {
             return jdbcTemplate.query(FIND_BY_ID_QUERY, new BeanPropertyRowMapper<>(GiftCertificate.class), id)
                     .stream().findAny().orElseThrow();
@@ -127,57 +113,59 @@ public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> impleme
         }
         StringBuilder query = new StringBuilder(FIND_ALL_QUERY);
         List<Object> argsList = new ArrayList<>();
-        query.append(getTagsQuery(rph.getTags(), argsList));
-        query.append(getSearchQuery(rph.getSearch(), argsList));
+        StringJoiner joiner = new StringJoiner(AND_DELIMITER, WHERE_PREFIX, SPACE_SUFFIX);
+        joiner.setEmptyValue("");
+        if ((rph.getTags() != null) && !rph.getTags().isEmpty()) {
+            joiner.add(prepareTagsQuery(rph.getTags(), argsList));
+        }
+        if ((rph.getSearch() != null) && !rph.getSearch().isEmpty()) {
+            joiner.add(getSearchQuery(rph.getSearch(), argsList));
+        }
+        query.append(joiner.toString());
         query.append(getOrderByQuery(rph));
         query.append(LIMIT_OFFSET);
         argsList.add(rph.getSize());
-        argsList.add(getOffset(rph));
+        argsList.add(rph.getOffset());
         return jdbcTemplate.query(query.toString(),
                                   new BeanPropertyRowMapper<>(GiftCertificate.class),
                                   argsList.toArray());
     }
 
     private String getSearchQuery(String search, List<Object> argsList) {
-        if ((search == null) || search.isEmpty()) {
-            return "";
-        }
         argsList.add(SQL_ANY_SYMBOL + search + SQL_ANY_SYMBOL);
         return SEARCH_QUERY;
     }
 
-    private String getTagsQuery(List<String> tags, List<Object> argsList) {
-        if ((tags == null) || tags.isEmpty()) {
-            return ") ";
-        }
-        StringJoiner joiner = new StringJoiner(", ", "(", ") ");
+    private String prepareTagsQuery(List<String> tags, List<Object> argsList) {
+        StringJoiner joiner = new StringJoiner(COMMA_SPACE_DELIMITER, BRACKET_PREFIX, BRACKET_SPACE_SUFFIX);
         for (String tagName : tags) {
             if ((tagName == null) || tagName.isEmpty()) {
                 throw new InvalidTagNameException();
             }
-            joiner.add("?");
+            joiner.add(QUESTION_MARK);
             argsList.add(tagName);
         }
         argsList.add(tags.size());
-        StringBuilder tagsQuery = new StringBuilder(TAGS_QUERY_FIRST_PART)
-                .append(joiner.toString())
-                .append(TAGS_QUERY_LAST_PART);
-        return tagsQuery.toString();
+        return TAGS_QUERY_FIRST_PART + joiner.toString() + TAGS_QUERY_LAST_PART;
     }
 
     private String getOrderByQuery(RequestParametersHolder rph) {
-        Map<String, String> sortMap = rph.getSortMap();
-        if (rph.getSortMap().isEmpty()) {
+        if ((rph.getSortList() == null) || rph.getSortList().isEmpty()) {
             return "";
         }
-        StringJoiner joiner = new StringJoiner(ORDER_BY_DELIMITER, ORDER_BY_QUERY, " ");
-        sortMap.forEach((k, v) -> joiner.add(giftCertificateSortMap.getConfigMap().get(k) + " " + v));
+        StringJoiner joiner = new StringJoiner(COMMA_SPACE_DELIMITER, ORDER_BY_QUERY, SPACE_DELIMITER);
+        for (String sort : rph.getSortList()) {
+            if ((sort == null) || !sort.matches(SORT_PATTERN)) {
+                throw new InvalidSortRequestException(SORT_PATTERN.substring(2, SORT_PATTERN.length() - 5));
+            }
+            joiner.add(GIFT_CERTIFICATE_TABLE_SHORT_NAME + sort.replaceFirst(SORT_REPLACE_PATTERN, SPACE_DELIMITER));
+        }
         return joiner.toString();
     }
 
     @Override
     @Transactional
-    public GiftCertificate update(GiftCertificate certificate) throws DaoWrongIdException {
+    public GiftCertificate update(GiftCertificate certificate) {
         if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, certificate.getId()) == 0) {
             throw new DaoWrongIdException(certificate.getId(), RESOURCE_NAME);
         }
@@ -199,14 +187,12 @@ public class GiftCertificateDaoImpl extends AbstractDao<GiftCertificate> impleme
 
     @Override
     @Transactional
-    public GiftCertificate updateDuration(long id, int duration, LocalDateTime currentDate) throws DaoWrongIdException {
+    public GiftCertificate updateDuration(long id, int duration, LocalDateTime currentDate) {
         if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, id) == 0) {
             throw new DaoWrongIdException(id, RESOURCE_NAME);
         }
-        Object[] args = new Object[] {duration,
-                                      convertLocalDateTimeToTimestamp(currentDate),
-                                      id};
-        jdbcTemplate.update(UPDATE_DURATION_QUERY, args);
+//        Object[] args = new Object[] {duration, convertLocalDateTimeToTimestamp(currentDate),id};
+        jdbcTemplate.update(UPDATE_DURATION_QUERY, duration, convertLocalDateTimeToTimestamp(currentDate),id);
         return findById(id);
     }
 

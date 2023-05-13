@@ -1,4 +1,10 @@
 package com.epam.esm.exception;
 
-public class InvalidSortRequestException extends RuntimeException{
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public class InvalidSortRequestException extends RuntimeException {
+    private String message;
 }

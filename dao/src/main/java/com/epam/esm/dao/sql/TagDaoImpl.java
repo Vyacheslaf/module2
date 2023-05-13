@@ -12,7 +12,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.annotation.RequestScope;
 
 import javax.sql.DataSource;
 import java.sql.PreparedStatement;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Repository
-@RequestScope
 public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     private static final String CREATE_QUERY = "INSERT INTO tag (name) VALUES (?)";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM tag WHERE id = ?";
@@ -36,7 +34,7 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
                             "LIMIT 1";
     private static final String CHECK_IF_CERTIFICATE_EXIST_QUERY = "SELECT COUNT(1) FROM gift_certificate WHERE id = ?";
     private static final String RESOURCE_NAME = "Tag";
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
     public TagDaoImpl(DataSource dataSource) {
@@ -44,7 +42,7 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     }
 
     @Override
-    public Tag create(Tag tag) throws DaoDuplicateKeyException {
+    public Tag create(Tag tag) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         try {
             jdbcTemplate.update(connection -> {
@@ -60,7 +58,7 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     }
 
     @Override
-    public Tag findById(long id) throws DaoWrongIdException {
+    public Tag findById(long id) {
         try {
             return jdbcTemplate.query(FIND_BY_ID_QUERY, new BeanPropertyRowMapper<>(Tag.class), id)
                     .stream().findAny().orElseThrow();
@@ -72,12 +70,7 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     @Override
     public List<Tag> findAll(RequestParametersHolder rph) {
         return jdbcTemplate.query(FIND_ALL_QUERY, new BeanPropertyRowMapper<>(Tag.class),
-                                  rph.getSize(), getOffset(rph));
-    }
-
-    @Override
-    public Tag update(Tag tag) throws DaoException {
-        throw new DaoUnsupportedOperationException();
+                                  rph.getSize(), rph.getOffset());
     }
 
     @Override
@@ -86,7 +79,7 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
     }
 
     @Override
-    public Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId) throws DaoException {
+    public Tag findMostWidelyUsedTagOfUserWithHighestCostOfAllOrders(long userId) {
         try {
             return jdbcTemplate.query(FIND_BY_USER_ID_QUERY, new BeanPropertyRowMapper<>(Tag.class), userId)
                     .stream().findAny().orElseThrow();
@@ -97,12 +90,12 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
 
     @Override
     @Transactional
-    public List<Tag> findGiftCertificateTags(long giftCertificateId, RequestParametersHolder rph) throws DaoException {
+    public List<Tag> findGiftCertificateTags(long giftCertificateId, RequestParametersHolder rph) {
         if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, giftCertificateId) == 0) {
             throw new DaoWrongIdException(giftCertificateId, "GiftCertificate");
         }
         String FIND_GIFT_CERTIFICATE_TAGS_QUERY = "select * from tag where id in (select tag_id from gift_certificate_tag where gift_certificate_id = ?) limit ? offset ?";
         return jdbcTemplate.query(FIND_GIFT_CERTIFICATE_TAGS_QUERY, new BeanPropertyRowMapper<>(Tag.class),
-                                  giftCertificateId, rph.getSize(), getOffset(rph));
+                                  giftCertificateId, rph.getSize(), rph.getOffset());
     }
 }

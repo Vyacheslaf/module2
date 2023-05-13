@@ -7,6 +7,6 @@ import com.epam.esm.exception.dao.DaoException;
 import java.util.List;
 
 public interface OrderDao extends Dao<Order> {
-    List<Order> findAllByUserId(long userId, int page, int size) throws DaoException;
-    Order findByUserAndOrderIds(long userId, long orderId) throws DaoException;
+    List<Order> findAllByUserId(long userId, int page, int size);
+    Order findByUserAndOrderIds(long userId, long orderId);
 }
