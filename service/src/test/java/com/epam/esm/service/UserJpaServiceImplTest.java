@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceImplTest {
+public class UserJpaServiceImplTest {
     private static final int USER_LIST_SIZE = 3;
     private static List<User> userList;
     @Mock

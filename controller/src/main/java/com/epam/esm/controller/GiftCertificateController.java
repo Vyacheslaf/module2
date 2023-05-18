@@ -1,6 +1,6 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dto.GiftCertificateDuration;
+import com.epam.esm.controller.dto.GiftCertificateDuration;
 import com.epam.esm.entity.Tag;
 import com.epam.esm.exception.controller.NoContentException;
 import com.epam.esm.service.GiftCertificateService;
@@ -17,7 +17,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -38,52 +38,52 @@ public class GiftCertificateController {
 
     /**
      * Gets all {@code GiftCertificate} by its {@code id}
-     *
+     * <p>
      * GET /certificate/{id}:
-     *      Request:
-     *          Request Body:
-     *              No body
-     *          Request Parameters:
-     *              (optional) tagName: any string
-     *              (optional) search: any string
-     *              (optional, multiple) sortBy: "name" | "date" (case insensitive)
-     *              (optional, multiple) sortDir: "asc" | "desc" (case insensitive)
+     * Request:
+     * Request Body:
+     * No body
+     * Request Parameters:
+     * (optional) tagName: any string
+     * (optional) search: any string
+     * (optional, multiple) sortBy: "name" | "date" (case insensitive)
+     * (optional, multiple) sortDir: "asc" | "desc" (case insensitive)
+     * <p>
+     * Response:
+     * Content-Type: application/json
+     * Status Codes: 200, 204
+     * Response Body: com.epam.esm.GiftCertificate
+     * application/json: [{"id":number,
+     * "name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * "createDate":"string",
+     * "lastUpdateDate":"string",
+     * "tags":[{"id":number,"tagName":"string"}
+     * ,{"id":number,"tagName":"string"},...]},
+     * {"id":number,
+     * "name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * "createDate":"string",
+     * "lastUpdateDate":"string",
+     * "tags":[{"id":number,"tagName":"string"},
+     * {"id":number,"tagName":"string"},...]},
+     * ...]
      *
-     *      Response:
-     *          Content-Type: application/json
-     *          Status Codes: 200, 204
-     *              Response Body: com.epam.esm.GiftCertificate
-     *                  application/json: [{"id":number,
-     *                                      "name":"string",
-     *                                      "description":"string",
-     *                                      "price":number,
-     *                                      "duration":number,
-     *                                      "createDate":"string",
-     *                                      "lastUpdateDate":"string",
-     *                                      "tags":[{"id":number,"tagName":"string"}
-     *                                              ,{"id":number,"tagName":"string"},...]},
-     *                                     {"id":number,
-     *                                      "name":"string",
-     *                                      "description":"string",
-     *                                      "price":number,
-     *                                      "duration":number,
-     *                                      "createDate":"string",
-     *                                      "lastUpdateDate":"string",
-     *                                      "tags":[{"id":number,"tagName":"string"},
-     *                                              {"id":number,"tagName":"string"},...]},
-     *                                      ...]
-     *
-     * @param tag Request parameter for search by {@code Tag.tagName}
+     * @param tag    Request parameter for search by {@code Tag.tagName}
      * @param search Request parameter for search by part of {@code GiftCertificate.name}
      *               or {@code GiftCertificate.description}
-     * param sortBy Request parameter for sort by {@code GiftCertificate.name} or {@code GiftCertificate.createDate}
-     * param sortDir Request parameter for select sort direction {@code asc} | {@code | desc}
+     *               param sortBy Request parameter for sort by {@code GiftCertificate.name} or {@code GiftCertificate.createDate}
+     *               param sortDir Request parameter for select sort direction {@code asc} | {@code | desc}
      * @return List of {@code GiftCertificate} with Http Status 200
-     *          or empty response with Http Status 204 if any {@code Tag} was not found
+     * or empty response with Http Status 204 if any {@code Tag} was not found
      */
     @JsonView(Views.ShortView.class)
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping(produces = { "application/hal+json" })
+    @GetMapping(produces = {"application/hal+json"})
     public CollectionModel<GiftCertificate> findAll(@RequestParam(required = false) List<String> tag,
                                                     @RequestParam(required = false) String search,
 //            @Pattern(regexp = SORT_PATTERN, message = SORT_REGEX_ERROR_MESSAGE)
@@ -97,51 +97,51 @@ public class GiftCertificateController {
         }
         for (GiftCertificate giftCertificate : giftCertificates) {
             Link link = linkTo(methodOn(GiftCertificateController.class).findById(giftCertificate.getId()))
-                        .withSelfRel();
+                    .withSelfRel();
             giftCertificate.add(link);
         }
         Link link = linkTo(methodOn(GiftCertificateController.class).findAll(tag, search, sort, page, size))
-                    .withSelfRel();
+                .withSelfRel();
         return CollectionModel.of(giftCertificates, link);
     }
 
     /**
      * Gets {@code GiftCertificate} by its {@code id}
-     *
+     * <p>
      * GET /certificate/{id}:
-     *      Request:
-     *          No body
-     *
-     *      Response:
-     *          Content-Type: application/json
-     *          Status Codes: 200
-     *              Response Body: com.epam.esm.GiftCertificate
-     *                  application/json: {"id":number,
-     *                                     "name":"string",
-     *                                     "description":"string",
-     *                                     "price":number,
-     *                                     "duration":number,
-     *                                     "createDate":"string",
-     *                                     "lastUpdateDate":"string",
-     *                                     "tags":[{"id":"string","tagName":"string"},
-     *                                             {"id":"string","tagName":"string"},...]}
-     *
-     *  Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
+     * Request:
+     * No body
+     * <p>
+     * Response:
+     * Content-Type: application/json
+     * Status Codes: 200
+     * Response Body: com.epam.esm.GiftCertificate
+     * application/json: {"id":number,
+     * "name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * "createDate":"string",
+     * "lastUpdateDate":"string",
+     * "tags":[{"id":"string","tagName":"string"},
+     * {"id":"string","tagName":"string"},...]}
+     * <p>
+     * Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
      *
      * @param id {@code GiftCertificate}'s {@code id}
-     * @see com.epam.esm.entity.GiftCertificate
      * @return The {@code GiftCertificate} with such {@code id} with Http Status 200
+     * @see com.epam.esm.entity.GiftCertificate
      */
     @JsonView(Views.FullView.class)
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/{id}", produces = { "application/hal+json" })
+    @GetMapping(value = "/{id}", produces = {"application/hal+json"})
     public GiftCertificate findById(@PathVariable long id) {
         return addLinksToGiftCertificate(giftCertificateService.findById(id));
     }
 
     @JsonView(Views.ShortView.class)
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/{id}/tag", produces = { "application/hal+json" })
+    @GetMapping(value = "/{id}/tag", produces = {"application/hal+json"})
     public CollectionModel<Tag> findGiftCertificateTags(@PathVariable long id,
                                                         @RequestParam(defaultValue = "0") Integer page,
                                                         @RequestParam(defaultValue = "5") Integer size) {
@@ -152,99 +152,96 @@ public class GiftCertificateController {
             tag.add(link);
         }
         Link selflink = linkTo(methodOn(GiftCertificateController.class).findGiftCertificateTags(id, page, size))
-                        .withSelfRel();
+                .withSelfRel();
         Link userLink = linkTo(methodOn(GiftCertificateController.class).findById(id))
-                        .withRel(LinkRelation.of(PARENT_RELATION_NAME));
+                .withRel(LinkRelation.of(PARENT_RELATION_NAME));
         return CollectionModel.of(tags, selflink, userLink);
     }
 
     /**
      * Create {@code GiftCertificate}
-     *
+     * <p>
      * POST /certificate:
-     *      Request:
-     *          Content-Type: application/json
-     *          Request Body: com.epam.esm.GiftCertificate
-     *              application/json: {"name":"string",
-     *                                 "description":"string",
-     *                                 "price":number,
-     *                                 "duration":number,
-     *                                 Optional "createDate":"string",
-     *                                 Optional "lastUpdateDate":"string",
-     *                                 Optional "tags":[{"tagName":"string"},{"tagName":"string"},...]}
+     * Request:
+     * Content-Type: application/json
+     * Request Body: com.epam.esm.GiftCertificate
+     * application/json: {"name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * Optional "createDate":"string",
+     * Optional "lastUpdateDate":"string",
+     * Optional "tags":[{"tagName":"string"},{"tagName":"string"},...]}
+     * <p>
+     * Response:
+     * Location: /certificate/{id}
+     * Content-Type: application/json
+     * Status Codes: 201
+     * Response Body: com.epam.esm.GiftCertificate
+     * application/json: {"id":number,
+     * "name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * "createDate":"string",
+     * "lastUpdateDate":"string",
+     * "tags":[{"id":number,"tagName":"string"},
+     * {"id":number,"tagName":"string"},...]}
+     * <p>
+     * Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
      *
-     *      Response:
-     *          Location: /certificate/{id}
-     *          Content-Type: application/json
-     *          Status Codes: 201
-     *              Response Body: com.epam.esm.GiftCertificate
-     *                  application/json: {"id":number,
-     *                                     "name":"string",
-     *                                     "description":"string",
-     *                                     "price":number,
-     *                                     "duration":number,
-     *                                     "createDate":"string",
-     *                                     "lastUpdateDate":"string",
-     *                                     "tags":[{"id":number,"tagName":"string"},
-     *                                             {"id":number,"tagName":"string"},...]}
-     *
-     *  Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
-     *
-     * @param certificate Created {@code GiftCertificate} with required fields: name, description, price, duration
-     *
-     * @param bindingResult
-     * param ucb
+     * @param certificate   Created {@code GiftCertificate} with required fields: name, description, price, duration
+     * @param bindingResult param ucb
      * @return The created {@code GiftCertificate} with Http Status 201
      */
     @JsonView(Views.FullView.class)
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = { "application/hal+json" })
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = {"application/hal+json"})
     public GiftCertificate create(@Valid @RequestBody GiftCertificate certificate, BindingResult bindingResult) {
         return addLinksToGiftCertificate(giftCertificateService.create(certificate));
     }
 
     /**
      * Update {@code GiftCertificate} with selected {@code id}
-     *
+     * <p>
      * PATCH /certificate/{id}:
-     *      Request:
-     *          Content-Type: application/json
-     *          Request Body: com.epam.esm.GiftCertificate
-     *              application/json: {Optional "name":"string",
-     *                                 Optional "description":"string",
-     *                                 Optional "price":number,
-     *                                 Optional "duration":number,
-     *                                 Optional "createDate":"string",
-     *                                 Optional "lastUpdateDate":"string",
-     *                                 Optional "tags":[{"tagName":"string"},{"tagName":"string"},...]}
-     *
-     *      Response:
-     *          Location: /certificate/{id}
-     *          Content-Type: application/json
-     *          Status Codes: 201
-     *              Response Body: com.epam.esm.GiftCertificate
-     *                  application/json: {"id":number,
-     *                                     "name":"string",
-     *                                     "description":"string",
-     *                                     "price":number,
-     *                                     "duration":number,
-     *                                     "createDate":"string",
-     *                                     "lastUpdateDate":"string",
-     *                                     "tags":[{"id":number,"tagName":"string"},
-     *                                             {"id":number,"tagName":"string"},...]}
-     *
-     *  Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
+     * Request:
+     * Content-Type: application/json
+     * Request Body: com.epam.esm.GiftCertificate
+     * application/json: {Optional "name":"string",
+     * Optional "description":"string",
+     * Optional "price":number,
+     * Optional "duration":number,
+     * Optional "createDate":"string",
+     * Optional "lastUpdateDate":"string",
+     * Optional "tags":[{"tagName":"string"},{"tagName":"string"},...]}
+     * <p>
+     * Response:
+     * Location: /certificate/{id}
+     * Content-Type: application/json
+     * Status Codes: 201
+     * Response Body: com.epam.esm.GiftCertificate
+     * application/json: {"id":number,
+     * "name":"string",
+     * "description":"string",
+     * "price":number,
+     * "duration":number,
+     * "createDate":"string",
+     * "lastUpdateDate":"string",
+     * "tags":[{"id":number,"tagName":"string"},
+     * {"id":number,"tagName":"string"},...]}
+     * <p>
+     * Fields "createDate" and "lastUpdateDate" are in format "yyyy-MM-dd'T'HH:mm:ss.SSS".
      *
      * @param certificate Created {@code GiftCertificate} with required fields: name, description, price, duration
-     *
-     * @param id {@code GiftCertificate}'s {@code id}
+     * @param id          {@code GiftCertificate}'s {@code id}
      * @param certificate Update {@code GiftCertificate} with all optional fields
-     * param ucb
+     *                    param ucb
      * @return The updated {@code GiftCertificate} with Http Status 200
      */
     @JsonView(Views.FullView.class)
     @ResponseStatus(HttpStatus.OK)
-    @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = { "application/hal+json" })
+    @PatchMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {"application/hal+json"})
     public GiftCertificate update(@PathVariable long id, @RequestBody GiftCertificate certificate) {
         certificate.setId(id);
         return addLinksToGiftCertificate(giftCertificateService.update(certificate));
@@ -252,36 +249,36 @@ public class GiftCertificateController {
 
     /**
      * Removes {@code GiftCertificate} by its {@code id}
-     *
+     * <p>
      * DELETE /certificate/{id}:
-     *      Request:
-     *          No body
-     *
-     *      Response:
-     *          Content-Type: application/json
-     *          Status Codes: 200
-     *              Response Body:
-     *                  No body
+     * Request:
+     * No body
+     * <p>
+     * Response:
+     * Content-Type: application/json
+     * Status Codes: 200
+     * Response Body:
+     * No body
      *
      * @param id {@code GiftCertificate}'s {@code id}
-     * @see com.epam.esm.entity.GiftCertificate
      * @return Nothing with Http Status 200
+     * @see com.epam.esm.entity.GiftCertificate
      */
     @ResponseStatus(HttpStatus.OK)
-    @DeleteMapping(value = "/{id}", produces = { "application/hal+json" })
+    @DeleteMapping(value = "/{id}", produces = {"application/hal+json"})
     public RepresentationModel<?> delete(@PathVariable long id) {
         giftCertificateService.delete(id);
-        return  new RepresentationModel<>()
-                    .add(linkTo(methodOn(GiftCertificateController.class)
-                                .findAll(null, null, null, null, null))
-                            .withRel(PARENT_RELATION_NAME));
+        return new RepresentationModel<>()
+                .add(linkTo(methodOn(GiftCertificateController.class)
+                        .findAll(null, null, null, null, null))
+                        .withRel(PARENT_RELATION_NAME));
     }
 
     @JsonView(Views.FullView.class)
     @ResponseStatus(HttpStatus.OK)
     @PatchMapping(value = "/{id}/duration",
-                  consumes = MediaType.APPLICATION_JSON_VALUE,
-                  produces = { "application/hal+json" })
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = {"application/hal+json"})
     public GiftCertificate updateDuration(@PathVariable long id,
                                           @Valid @RequestBody GiftCertificateDuration dto,
                                           BindingResult bindingResult) {
@@ -292,8 +289,8 @@ public class GiftCertificateController {
         certificate.add(linkTo(GiftCertificateController.class).slash(certificate.getId()).withSelfRel());
         certificate.add(linkTo(GiftCertificateController.class).withRel(LinkRelation.of(PARENT_RELATION_NAME)));
         certificate.add(linkTo(methodOn(GiftCertificateController.class)
-                                .findGiftCertificateTags(certificate.getId(), null, null))
-                                .withRel(IanaLinkRelations.COLLECTION));
+                .findGiftCertificateTags(certificate.getId(), null, null))
+                .withRel(IanaLinkRelations.COLLECTION));
         return certificate;
     }
 }

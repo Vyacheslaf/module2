@@ -3,8 +3,10 @@ package com.epam.esm.dao.sql;
 import com.epam.esm.dao.OrderDao;
 import com.epam.esm.entity.Order;
 import com.epam.esm.exception.dao.DaoWrongIdException;
+import com.epam.esm.exception.dao.DaoWrongOrderFieldsException;
 import com.epam.esm.exception.dao.DaoWrongOrderIdForUserException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.sql.PreparedStatement;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
@@ -53,6 +56,7 @@ public class OrderDaoImpl extends AbstractDao<Order> implements OrderDao {
     @Override
     public Order create(Order order) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
+        try {
         jdbcTemplate.update(connection -> {
             PreparedStatement pstmt = connection.prepareStatement(CREATE_QUERY, Statement.RETURN_GENERATED_KEYS);
             int k = 0;
@@ -62,6 +66,9 @@ public class OrderDaoImpl extends AbstractDao<Order> implements OrderDao {
             pstmt.setTimestamp(++k, Timestamp.valueOf(order.getPurchaseDate()));
             return pstmt;
             }, keyHolder);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoWrongOrderFieldsException(e, order.getUserId(), order.getGiftCertificateId());
+        }
         return findById(keyHolder.getKey().longValue());
     }
 

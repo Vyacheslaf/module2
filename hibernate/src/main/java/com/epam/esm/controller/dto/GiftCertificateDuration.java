@@ -1,4 +1,4 @@
-package com.epam.esm.dto;
+package com.epam.esm.controller.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

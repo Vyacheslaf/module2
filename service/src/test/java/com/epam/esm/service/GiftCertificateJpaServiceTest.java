@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class GiftCertificateServiceTest {
+public class GiftCertificateJpaServiceTest {
     private static final int MOCK_CERTIFICATE_LIST_SIZE = 3;
     private static List<GiftCertificate> giftCertificates;
     private static RequestParametersHolder rph;

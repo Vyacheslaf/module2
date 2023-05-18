@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestGiftCertificateService {
+public class TestGiftCertificateJpaService {
     private static final int H2_CERTIFICATE_LIST_SIZE = 2;
     private RequestParametersHolder rph = new RequestParametersHolder(0, 5);
     private DataSource dataSource;

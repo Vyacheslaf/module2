@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
-public class TagServiceImplTest {
+public class TagJpaServiceImplTest {
 
     private static final int TAG_LIST_SIZE = 3;
     private static List<Tag> tagList;

@@ -1,14 +1,20 @@
 package com.epam.esm.dao.sql;
 
 import com.epam.esm.entity.User;
+import com.epam.esm.exception.dao.DaoDuplicateKeyException;
 import com.epam.esm.exception.dao.DaoWrongIdException;
 import com.epam.esm.util.RequestParametersHolder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.util.*;
 
 @Repository

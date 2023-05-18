@@ -10,8 +10,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @PropertySource("classpath:datasource.properties")
-@PropertySource("classpath:sort.properties")
-public class RestApiConfig {
+public class DataSourceConfiguration {
     @Autowired
     private Environment env;
 
@@ -34,10 +33,4 @@ public class RestApiConfig {
         hikariConfig.addDataSourceProperty("dataSource.prepStmtCacheSqlLimit", "2048");
         return new HikariDataSource(hikariConfig);
     }
-
-/*    @Bean
-    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
-        return new Jackson2ObjectMapperBuilder().serializers(LOCAL_DATETIME_SERIALIZER);
-//                .serializationInclusion(JsonInclude.Include.NON_NULL);
-    }*/
 }

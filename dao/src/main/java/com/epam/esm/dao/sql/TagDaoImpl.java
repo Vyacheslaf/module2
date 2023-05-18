@@ -32,6 +32,9 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
                             "GROUP BY gct.tag_id " +
                             "ORDER BY SUM(cost) DESC " +
                             "LIMIT 1";
+    private static final String FIND_GIFT_CERTIFICATE_TAGS_QUERY = "SELECT * FROM tag WHERE id IN " +
+                                            "(SELECT tag_id FROM gift_certificate_tag WHERE gift_certificate_id = ?) " +
+                                            "LIMIT ? OFFSET ?";
     private static final String CHECK_IF_CERTIFICATE_EXIST_QUERY = "SELECT COUNT(1) FROM gift_certificate WHERE id = ?";
     private static final String RESOURCE_NAME = "Tag";
     private final JdbcTemplate jdbcTemplate;
@@ -94,7 +97,6 @@ public class TagDaoImpl extends AbstractDao<Tag> implements TagDao {
         if (jdbcTemplate.queryForObject(CHECK_IF_CERTIFICATE_EXIST_QUERY, Long.class, giftCertificateId) == 0) {
             throw new DaoWrongIdException(giftCertificateId, "GiftCertificate");
         }
-        String FIND_GIFT_CERTIFICATE_TAGS_QUERY = "select * from tag where id in (select tag_id from gift_certificate_tag where gift_certificate_id = ?) limit ? offset ?";
         return jdbcTemplate.query(FIND_GIFT_CERTIFICATE_TAGS_QUERY, new BeanPropertyRowMapper<>(Tag.class),
                                   giftCertificateId, rph.getSize(), rph.getOffset());
     }

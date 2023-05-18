@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class OrderServiceImplTest {
+public class OrderJpaServiceImplTest {
     private static final int ORDER_LIST_SIZE = 3;
     private static List<Order> orderList;
     @Mock

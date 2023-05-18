@@ -1,10 +1,7 @@
 package com.epam.esm.exception;
 
 import com.epam.esm.exception.controller.NoContentException;
-import com.epam.esm.exception.dao.DaoDuplicateKeyException;
-import com.epam.esm.exception.dao.DaoTagForUserNotFoundException;
-import com.epam.esm.exception.dao.DaoWrongIdException;
-import com.epam.esm.exception.dao.DaoWrongOrderIdForUserException;
+import com.epam.esm.exception.dao.*;
 import com.epam.esm.exception.service.ServiceWrongTagNameException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataAccessException;
@@ -171,6 +168,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidTagNameException() {
         String errorCode = "40006";
         String errorMessage = "name of tag can not be null or empty";
+        ErrorResponse errorResponse = new ErrorResponse(errorMessage, errorCode);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DaoWrongOrderFieldsException.class)
+    public ResponseEntity<ErrorResponse> handleWrongOrderFieldsException() {
+        String errorCode = "40007";
+        String errorMessage = "wrong User's or GiftCertificate's ID";
         ErrorResponse errorResponse = new ErrorResponse(errorMessage, errorCode);
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
