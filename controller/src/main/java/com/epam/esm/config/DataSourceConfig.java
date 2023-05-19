@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @PropertySource("classpath:datasource.properties")
-public class DataSourceConfiguration {
+public class DataSourceConfig {
     @Autowired
     private Environment env;
 

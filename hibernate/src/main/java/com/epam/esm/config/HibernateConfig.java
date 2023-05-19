@@ -12,7 +12,7 @@ import java.util.Properties;
 
 @Configuration
 @PropertySource("classpath:hibernate.properties")
-public class HibernateConfiguration {
+public class HibernateConfig {
     @Autowired
     private Environment env;
 
